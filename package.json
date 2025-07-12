@@ -1,0 +1,16 @@
+{
+  "name": "stackit",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel dev",
+    "build": "pnpm --filter ./packages/* build",
+    "start": "pnpm --filter backend start"
+  },
+  "devDependencies": {
+    "pnpm": "^8.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

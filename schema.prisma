@@ -1,0 +1,197 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          UserRole  @default(USER)
+  bio           String?
+  avatar        String?
+  location      String?
+  website       String?
+  reputation    Int       @default(0)
+  isVerified    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastActiveAt  DateTime  @default(now())
+  
+  // Relations
+  questions     Question[]
+  answers       Answer[]
+  comments      Comment[]
+  votes         Vote[]
+  questionViews QuestionView[]
+  notifications Notification[] @relation("UserNotification")
+  mentions      Notification[] @relation("UserMention")
+  followers     Follow[] @relation("UserFollowers")
+  following     Follow[] @relation("UserFollowing")
+  
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+model Question {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  slug        String    @unique
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  tags        Tag[]     @relation("QuestionTags")
+  answers     Answer[]
+  views       QuestionView[]
+  viewCount   Int       @default(0)
+  voteCount   Int       @default(0)
+  answerCount Int       @default(0)
+  isResolved  Boolean   @default(false)
+  isPinned    Boolean   @default(false)
+  isLocked    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("questions")
+}
+
+model Answer {
+  id          String    @id @default(cuid())
+  content     String
+  questionId  String
+  question    Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  isAccepted  Boolean   @default(false)
+  voteCount   Int       @default(0)
+  comments    Comment[]
+  votes       Vote[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("answers")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  answerId  String
+  answer    Answer   @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  voteCount Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("comments")
+}
+
+model Tag {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  color       String?    @default("#3B82F6")
+  questions   Question[] @relation("QuestionTags")
+  usageCount  Int        @default(0)
+  createdAt   DateTime   @default(now())
+  
+  @@map("tags")
+}
+
+model Vote {
+  id       String   @id @default(cuid())
+  type     VoteType
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answerId String
+  answer   Answer   @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, answerId])
+  @@map("votes")
+}
+
+enum VoteType {
+  UPVOTE
+  DOWNVOTE
+}
+
+model QuestionView {
+  id         String   @id @default(cuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  
+  @@unique([questionId, userId])
+  @@unique([questionId, ipAddress])
+  @@map("question_views")
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+model Notification {
+  id          String    @id @default(cuid())
+  type        NotificationType
+  title       String
+  message     String
+  recipientId String
+  recipient   User      @relation("UserNotification", fields: [recipientId], references: [id], onDelete: Cascade)
+  senderId    String?
+  questionId  String?
+  answerId    String?
+  commentId   String?
+  mentionById String?
+  mentionBy   User?     @relation("UserMention", fields: [mentionById], references: [id], onDelete: Cascade)
+  isRead      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  
+  @@map("notifications")
+}
+
+enum NotificationType {
+  NEW_ANSWER
+  NEW_COMMENT
+  MENTION
+  ANSWER_ACCEPTED
+  QUESTION_UPVOTED
+  ANSWER_UPVOTED
+  NEW_FOLLOWER
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  @@map("sessions")
+}
+
